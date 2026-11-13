@@ -24,40 +24,23 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Find and extract ZIP
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Check Android project
         run: |
-          mkdir extracted
-          ZIP_FILE=$(find . -maxdepth 4 -type f -iname "*.zip" -not -path "./.git/*" | head -n 1)
-
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: ZIP file not found!"
-            exit 1
-          fi
-
-          unzip -q "$ZIP_FILE" -d extracted
-
-      - name: Locate Android project
-        run: |
-          PROJECT_FILE=$(find extracted -name settings.gradle.kts -print -quit)
-
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "Android project not found!"
-            exit 1
-          fi
-
-          PROJECT_DIR=$(dirname "$PROJECT_FILE")
-          cp -a "$PROJECT_DIR"/. .
+          echo "Checking project files..."
+          test -f settings.gradle.kts
+          test -f build.gradle.kts
+          test -f app/build.gradle.kts
+          test -f app/src/main/AndroidManifest.xml
+          test -f app/src/main/java/uz/jarvis/ai/MainActivity.kt
+          echo "All required files found!"
 
       - name: Apply latest AssistantService
         run: |
           mkdir -p app/src/main/java/uz/jarvis/ai
-
           cp AssistantService.kt \
-            app/src/main/java/uz/jarvis/ai/AssistantService.kt
-
-          echo "Updated AssistantService.kt applied"
-          echo "Checking source file:"
-          grep -n "object : okhttp3.Callback" \
             app/src/main/java/uz/jarvis/ai/AssistantService.kt
 
       - name: Set up Gradle
