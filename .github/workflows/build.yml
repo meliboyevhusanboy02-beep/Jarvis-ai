@@ -27,17 +27,13 @@ jobs:
       - name: Find and extract ZIP
         run: |
           mkdir extracted
-
           ZIP_FILE=$(find . -maxdepth 4 -type f -iname "*.zip" -not -path "./.git/*" | head -n 1)
 
           if [ -z "$ZIP_FILE" ]; then
             echo "ERROR: ZIP file not found!"
-            echo "Repository files:"
-            find . -maxdepth 4 -type f
             exit 1
           fi
 
-          echo "Found ZIP: $ZIP_FILE"
           unzip -q "$ZIP_FILE" -d extracted
 
       - name: Locate Android project
@@ -46,12 +42,23 @@ jobs:
 
           if [ -z "$PROJECT_FILE" ]; then
             echo "Android project not found!"
-            find extracted -maxdepth 5 -type f
             exit 1
           fi
 
           PROJECT_DIR=$(dirname "$PROJECT_FILE")
           cp -a "$PROJECT_DIR"/. .
+
+      - name: Apply latest AssistantService
+        run: |
+          mkdir -p app/src/main/java/uz/jarvis/ai
+
+          cp AssistantService.kt \
+            app/src/main/java/uz/jarvis/ai/AssistantService.kt
+
+          echo "Updated AssistantService.kt applied"
+          echo "Checking source file:"
+          grep -n "object : okhttp3.Callback" \
+            app/src/main/java/uz/jarvis/ai/AssistantService.kt
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
