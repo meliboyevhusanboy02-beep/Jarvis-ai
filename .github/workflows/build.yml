@@ -24,15 +24,29 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Extract JARVIS ZIP
+      - name: Find and extract ZIP
         run: |
           mkdir extracted
-          unzip -q JARVIS_Android_Phone_Build_Kit.zip -d extracted
 
+          ZIP_FILE=$(find . -maxdepth 4 -type f -iname "*.zip" -not -path "./.git/*" | head -n 1)
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: ZIP file not found!"
+            echo "Repository files:"
+            find . -maxdepth 4 -type f
+            exit 1
+          fi
+
+          echo "Found ZIP: $ZIP_FILE"
+          unzip -q "$ZIP_FILE" -d extracted
+
+      - name: Locate Android project
+        run: |
           PROJECT_FILE=$(find extracted -name settings.gradle.kts -print -quit)
 
           if [ -z "$PROJECT_FILE" ]; then
             echo "Android project not found!"
+            find extracted -maxdepth 5 -type f
             exit 1
           fi
 
@@ -44,13 +58,12 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Build JARVIS APK
+      - name: Build APK
         run: gradle :app:assembleDebug
 
-      - name: Upload JARVIS APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: JARVIS-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-
