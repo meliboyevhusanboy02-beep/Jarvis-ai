@@ -15,12 +15,15 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 
 import java.util.Locale
-import okhttp3.*
+import java.io.IOException
+
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
 
 class AssistantService : Service(), TextToSpeech.OnInitListener {
 
@@ -303,9 +306,7 @@ class AssistantService : Service(), TextToSpeech.OnInitListener {
     private fun askAi(message: String) {
 
         val history = try {
-            JSONArray(
-                prefs.getString("history", "[]") ?: "[]"
-            )
+            JSONArray(prefs.getString("history", "[]") ?: "[]")
         } catch (_: Exception) {
             JSONArray()
         }
@@ -322,9 +323,7 @@ class AssistantService : Service(), TextToSpeech.OnInitListener {
             .put("history", history)
 
         val request = Request.Builder()
-            .url(
-                BuildConfig.BASE_URL.trimEnd('/') + "/chat"
-            )
+            .url(BuildConfig.BASE_URL.trimEnd('/') + "/chat")
             .post(
                 payload.toString().toRequestBody(
                     "application/json".toMediaType()
@@ -332,71 +331,72 @@ class AssistantService : Service(), TextToSpeech.OnInitListener {
             )
             .build()
 
-        client.newCall(request).enqueue(object : Callback {
+        client.newCall(request).enqueue(
+            object : okhttp3.Callback {
 
-            override fun onFailure(
-                call: Call,
-                e: IOException
-            ) {
+                override fun onFailure(
+                    call: okhttp3.Call,
+                    e: IOException
+                ) {
 
-                handler.post {
-                    if (!stopping) {
-                        speak(
-                            "Internet yoki JARVIS serveriga ulanishda muammo bor"
-                        )
-                    }
-                }
-            }
-
-            override fun onResponse(
-                call: Call,
-                response: Response
-            ) {
-
-                val reply = response.use {
-
-                    val body = it.body?.string().orEmpty()
-
-                    if (!it.isSuccessful) {
-                        "Serverda xatolik yuz berdi"
-                    } else {
-                        try {
-                            JSONObject(body).optString(
-                                "reply",
-                                "Javob olinmadi"
+                    handler.post {
+                        if (!stopping) {
+                            speak(
+                                "Internet yoki JARVIS serveriga ulanishda muammo bor"
                             )
-                        } catch (_: Exception) {
-                            "Server javobini o‘qib bo‘lmadi"
                         }
                     }
                 }
 
-                handler.post {
+                override fun onResponse(
+                    call: okhttp3.Call,
+                    response: okhttp3.Response
+                ) {
 
-                    if (stopping) return@post
+                    val reply = response.use { res ->
 
-                    history.put(
-                        JSONObject()
-                            .put("role", "assistant")
-                            .put("content", reply)
-                    )
+                        val body = res.body?.string().orEmpty()
 
-                    val trimmed = JSONArray()
-
-                    val from = maxOf(0, history.length() - 16)
-
-                    for (i in from until history.length()) {
-                        trimmed.put(history.getJSONObject(i))
+                        if (!res.isSuccessful) {
+                            "Serverda xatolik yuz berdi"
+                        } else {
+                            try {
+                                JSONObject(body).optString(
+                                    "reply",
+                                    "Javob olinmadi"
+                                )
+                            } catch (_: Exception) {
+                                "Server javobini o‘qib bo‘lmadi"
+                            }
+                        }
                     }
 
-                    prefs.edit()
-                        .putString("history", trimmed.toString())
-                        .apply()
+                    handler.post {
 
-                    speak(reply)
+                        if (stopping) return@post
+
+                        history.put(
+                            JSONObject()
+                                .put("role", "assistant")
+                                .put("content", reply)
+                        )
+
+                        val trimmed = JSONArray()
+                        val from = maxOf(0, history.length() - 16)
+
+                        for (i in from until history.length()) {
+                            trimmed.put(history.getJSONObject(i))
+                        }
+
+                        prefs.edit()
+                            .putString("history", trimmed.toString())
+                            .apply()
+
+                        speak(reply)
+                    }
                 }
             }
-        })
+        )
     }
 
     private fun scheduleRestart(delay: Long) {
@@ -443,11 +443,8 @@ class AssistantService : Service(), TextToSpeech.OnInitListener {
         if (status == TextToSpeech.SUCCESS) {
 
             val locale = when (language) {
-
                 "ru-RU" -> Locale("ru", "RU")
-
                 "en-US" -> Locale.US
-
                 else -> Locale("uz", "UZ")
             }
 
