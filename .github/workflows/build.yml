@@ -34,19 +34,15 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Check project files
+      - name: Show project files
         run: |
-          echo "Checking JARVIS project..."
-          test -f settings.gradle.kts
-          test -f build.gradle.kts
-          test -f app/build.gradle.kts
-          test -f app/src/main/AndroidManifest.xml
-          test -f app/src/main/java/uz/jarvis/ai/MainActivity.kt
-          test -f app/src/main/java/uz/jarvis/ai/AssistantService.kt
-          echo "All project files found!"
+          echo "PROJECT FILES:"
+          ls -la
+          echo "APP SOURCE FILES:"
+          find app/src/main -type f
 
       - name: Build JARVIS APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload JARVIS APK
         uses: actions/upload-artifact@v4
