@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download project
+      - name: Checkout project
         uses: actions/checkout@v4
 
       - name: Set up Java 17
@@ -27,26 +27,24 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Check Android project
+      - name: Install Android SDK packages
         run: |
-          echo "Checking project files..."
-          test -f settings.gradle.kts
-          test -f build.gradle.kts
-          test -f app/build.gradle.kts
-          test -f app/src/main/AndroidManifest.xml
-          test -f app/src/main/java/uz/jarvis/ai/MainActivity.kt
-          echo "All required files found!"
-
-      - name: Apply latest AssistantService
-        run: |
-          mkdir -p app/src/main/java/uz/jarvis/ai
-          cp AssistantService.kt \
-            app/src/main/java/uz/jarvis/ai/AssistantService.kt
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+
+      - name: Check project
+        run: |
+          test -f settings.gradle.kts
+          test -f build.gradle.kts
+          test -f app/build.gradle.kts
+          test -f app/src/main/AndroidManifest.xml
+          test -f app/src/main/java/uz/jarvis/ai/MainActivity.kt
+          test -f app/src/main/java/uz/jarvis/ai/AssistantService.kt
 
       - name: Build APK
         run: gradle :app:assembleDebug
